@@ -1,0 +1,16 @@
+{
+  "name": "lanzo/commerce-theme",
+  "autoload": {
+    "psr-4": {}
+  },
+  "authors": [
+    {
+      "name": "Nicola",
+      "email": "lanzoni.nicola@gmail.com"
+    }
+  ],
+  "require-dev": {
+    "symfony/var-dumper": "^5.4"
+  },
+  "require": {}
+}
