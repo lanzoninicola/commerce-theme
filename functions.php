@@ -5,17 +5,49 @@ add_action( 'wp_enqueue_scripts', function () {
     wp_enqueue_style( 'main', get_stylesheet_directory_uri() . '/assets/dist/main.css', array(), '1.0.0', 'all' );
 } );
 
-// dump( scandir( get_template_directory() . '/routes' ) );
-
-// for each file inside the routes folder, check if it is a PHP file. If it is, remove the extension and add rewrite rule
-
 function rewrite_rule() {
+    $routes = scandir( get_template_directory() . '/routes' );
 
-    foreach ( scandir( get_template_directory() . '/routes' ) as $file ) {
+    foreach ( $routes as $route ) {
 
-        if ( strpos( $file, '.php' ) !== false ) {
-            $file = str_replace( '.php', '', $file );
-            add_rewrite_rule( $file, 'index.php?pagename=' . $file, 'top' );
+        if ( $route === '.' || $route === '..' ) {
+            continue;
+        }
+
+        $routes_path = get_template_directory() . '/routes/' . $route;
+
+        if ( is_dir( $routes_path ) ) {
+
+            $route_files = scandir( $routes_path );
+
+            foreach ( $route_files as $route_file ) {
+
+                if ( $route_file === '.' || $route_file === '..' ) {
+                    continue;
+                }
+
+                $route_file_path = $routes_path . '/' . $route_file;
+
+                if ( is_file( $route_file_path ) ) {
+                    $route_file_name = str_replace( '.php', '', $route_file );
+                    add_rewrite_rule(
+                        $route . '/' . $route_file_name . '/?$',
+                        "index.php?pagename=$route-$route_file_name",
+                        'top'
+                    );
+                }
+
+            }
+
+        } else {
+            $route_file_name = str_replace( '.php', '', $route );
+
+            add_rewrite_rule(
+                $route . '/?$',
+                'index.php?pagename=' . $route_file_name,
+                'top'
+            );
+
         }
 
     }
@@ -24,11 +56,34 @@ function rewrite_rule() {
 
 function query_vars( $query_vars ) {
 
-    foreach ( scandir( get_template_directory() . '/routes' ) as $file ) {
+    $routes = scandir( get_template_directory() . '/routes' );
 
-        if ( strpos( $file, '.php' ) !== false ) {
-            $file         = str_replace( '.php', '', $file );
-            $query_vars[] = $file;
+    foreach ( $routes as $route ) {
+
+        if ( $route === '.' || $route === '..' ) {
+            continue;
+        }
+
+        $routes_path = get_template_directory() . '/routes/' . $route;
+
+        if ( is_dir( $routes_path ) ) {
+
+            $route_files = scandir( $routes_path );
+
+            foreach ( $route_files as $route_file ) {
+
+                if ( $route_file === '.' || $route_file === '..' ) {
+                    continue;
+                }
+
+                $route_file_name = str_replace( '.php', '', $route_file );
+                $query_vars[]    = "$route/$route_file_name";
+
+            }
+
+        } else {
+            $route_name   = str_replace( '.php', '', $route );
+            $query_vars[] = $route_name;
         }
 
     }
@@ -40,43 +95,42 @@ function query_vars( $query_vars ) {
 function theme_template_include() {
 
     $template_name = get_query_var( 'pagename' );
-    $template_path = get_template_directory() . '/routes/' . $template_name . '.php';
+    $routes_path   = get_template_directory() . '/routes';
 
-    return $template_path;
+    /** It is the website home-page. Get the template via wordpress standard way.*/
 
-// $template_file = file_exists( $template_path ) ? $template_path : false;
+    if ( $template_name === '' ) {
+        return;
+    }
 
-// $template_data = $template_file ? Database::get_template_data( $template_name ) : false;
+    /** Browser points to a route folder. If the index.php file exists, use it otherwise returns 404. */
 
-// if ( $template_file && is_array( $template_data ) ) {
+    if ( is_dir( "$routes_path/$template_name" ) ) {
 
-//     echo Frontend::render_data( $template_data, get_the_ID(), $template_name, true );
+        if ( file_exists( "$routes_path/$template_name/index.php" ) ) {
+            return "$routes_path/$template_name/index.php";
+        }
 
-// } else {
+        return get_404_template();
+    }
 
-//     echo '<h1>' . esc_html__( '404 - Whoops, that page is gone', 'commerce-theme' ) . '</h1>';
-    // }
+    /** Browser point to a subroute */
+
+    if ( strpos( $template_name, '-' ) > 0 ) {
+        $path       = explode( '-', $template_name );
+        $route_path = $routes_path . '/' . $path[0] . '/' . $path[1] . '.php';
+
+        if ( file_exists( $route_path ) ) {
+            return $route_path;
+        }
+
+        return get_404_template();
+    }
+
+    return "$routes_path/$template_name.php";
 
 }
 
 add_action( 'init', 'rewrite_rule' );
 add_filter( 'query_vars', 'query_vars' );
 add_action( 'template_include', 'theme_template_include' );
-
-add_action( 'init', function () {
-    add_rewrite_rule( 'character/([a-z]+)[/]?$', 'index.php?character=$matches[1]', 'top' );
-} );
-
-add_filter( 'query_vars', function ( $query_vars ) {
-    $query_vars[] = 'character';
-    return $query_vars;
-} );
-
-add_action( 'template_include', function ( $template ) {
-
-    if ( get_query_var( 'character' ) == false || get_query_var( 'character' ) == '' ) {
-        return $template;
-    }
-
-    return get_template_directory() . '/character.php';
-} );
