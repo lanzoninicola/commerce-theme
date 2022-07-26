@@ -4,21 +4,41 @@ namespace CommerceTheme\App;
 
 class ThemeRoutes {
 
-    public static function rewrite_rule() {
+    /**
+     * Object that own of the structure of the "routes" folder.
+     *
+     * @var Routes
+     */
+    private Routes $routes;
 
-        $routes = scandir( get_template_directory() . '/routes' );
+    /**
+     * Instance of the class.
+     *
+     * @var ThemeRoutes|null
+     */
+    public static $instance = null;
 
-        foreach ( $routes as $route ) {
+    // singletone call
+    public static function singletone( Routes $routes ) {
 
-            if ( $route === '.' || $route === '..' ) {
-                continue;
-            }
+        if ( self::$instance === null ) {
+            self::$instance = new ThemeRoutes( $routes );
+        }
 
-            $routes_path = get_template_directory() . '/routes/' . $route;
+        return self::$instance;
+    }
 
-            if ( is_dir( $routes_path ) ) {
+    public function __construct( Routes $routes ) {
+        $this->routes = $routes;
+    }
 
-                $route_files = scandir( $routes_path );
+    public function rewrite_rule() {
+
+        foreach ( $this->routes->get_routes() as $route => $route_path ) {
+
+            if ( is_dir( $route_path ) ) {
+
+                $route_files = scandir( $route_path );
 
                 foreach ( $route_files as $route_file ) {
 
@@ -26,7 +46,7 @@ class ThemeRoutes {
                         continue;
                     }
 
-                    $route_file_path = $routes_path . '/' . $route_file;
+                    $route_file_path = $route_path . '/' . $route_file;
 
                     if ( is_file( $route_file_path ) ) {
                         $route_file_name = str_replace( '.php', '', $route_file );
@@ -54,20 +74,13 @@ class ThemeRoutes {
 
     }
 
-    public static function query_vars( $query_vars ) {
-        $routes = scandir( get_template_directory() . '/routes' );
+    public function query_vars( $query_vars ) {
 
-        foreach ( $routes as $route ) {
+        foreach ( $this->routes->get_routes() as $route => $route_path ) {
 
-            if ( $route === '.' || $route === '..' ) {
-                continue;
-            }
+            if ( is_dir( $route_path ) ) {
 
-            $routes_path = get_template_directory() . '/routes/' . $route;
-
-            if ( is_dir( $routes_path ) ) {
-
-                $route_files = scandir( $routes_path );
+                $route_files = scandir( $route_path );
 
                 foreach ( $route_files as $route_file ) {
 
@@ -76,7 +89,7 @@ class ThemeRoutes {
                     }
 
                     $route_file_name = str_replace( '.php', '', $route_file );
-                    $query_vars[]    = "$route/$route_file_name";
+                    $query_vars[]    = "$route-$route_file_name";
 
                 }
 
@@ -90,22 +103,22 @@ class ThemeRoutes {
         return $query_vars;
     }
 
-    public static function include_template() {
-        $template_name = get_query_var( 'pagename' );
-        $routes_path   = get_template_directory() . '/routes';
+    public function include_template() {
+        $route_name       = get_query_var( 'pagename' );
+        $routes_root_path = $this->routes->get_routes_root_dir_path();
 
         /** It is the website home-page. Get the template via wordpress standard way.*/
 
-        if ( $template_name === '' ) {
+        if ( $route_name === '' ) {
             return;
         }
 
         /** Browser points to a route folder. If the index.php file exists, use it otherwise returns 404. */
 
-        if ( is_dir( "$routes_path/$template_name" ) ) {
+        if ( is_dir( "$routes_root_path/$route_name" ) ) {
 
-            if ( file_exists( "$routes_path/$template_name/index.php" ) ) {
-                return "$routes_path/$template_name/index.php";
+            if ( file_exists( "$routes_root_path/$route_name/index.php" ) ) {
+                return "$routes_root_path/$route_name/index.php";
             }
 
             return get_404_template();
@@ -113,9 +126,10 @@ class ThemeRoutes {
 
         /** Browser point to a subroute */
 
-        if ( strpos( $template_name, '-' ) > 0 ) {
-            $path       = explode( '-', $template_name );
-            $route_path = $routes_path . '/' . $path[0] . '/' . $path[1] . '.php';
+        if ( strpos( $route_name, '-' ) > 0 ) {
+
+            $path       = explode( '-', $route_name );
+            $route_path = $routes_root_path . '/' . $path[0] . '/' . $path[1] . '.php';
 
             if ( file_exists( $route_path ) ) {
                 return $route_path;
@@ -124,15 +138,15 @@ class ThemeRoutes {
             return get_404_template();
         }
 
-        return "$routes_path/$template_name.php";
+        return "$routes_root_path/$route_name.php";
 
     }
 
-    public static function run() {
+    public function run() {
 
-        add_action( 'init', array( __CLASS__, 'rewrite_rule' ) );
-        add_filter( 'query_vars', array( __CLASS__, 'query_vars' ) );
-        add_action( 'template_include', array( __CLASS__, 'include_template' ) );
+        add_action( 'init', array( $this, 'rewrite_rule' ) );
+        add_filter( 'query_vars', array( $this, 'query_vars' ) );
+        add_action( 'template_include', array( $this, 'include_template' ) );
 
     }
 
