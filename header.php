@@ -1,6 +1,6 @@
 
-<?php get_template_part( 'template-part/html-head' );?>
+<?php get_template_part( 'template-parts/html-head' );?>
 
-<?php get_template_part( 'template-part/header' );?>
+<?php get_template_part( 'template-parts/header' );?>
 
 

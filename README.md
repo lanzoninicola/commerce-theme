@@ -1,8 +1,10 @@
-# Webpack Setup with Tailwind
-This is a super simple Webpack setup to be used with TailwindCSS.
+## ROUTING
 
-## How To Use It
-1. Clone the respository
-2. run `npm install`
-3. run `npm run start` for development mode
-4. run `npm build` for production mode
+The routing system is based on the file system. Each file represents a page and each directory represents a section.
+This theme support upto one level of sections.
+
+/routes: this is the folder that contains the routes files
+
+## REACTJS
+
+/assets/src: this folder contains the source files for the assets (css, js)
