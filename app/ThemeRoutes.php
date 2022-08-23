@@ -32,13 +32,18 @@ class ThemeRoutes {
         $this->routes = $routes;
     }
 
+    /**
+     * Here we create the rules that WordPress will use to match the requests.
+     *
+     * add_rewrite_rule( $regex, $query_vars, $flags );
+     */
     public function rewrite_rule() {
 
-        foreach ( $this->routes->get_routes() as $route => $route_path ) {
+        foreach ( $this->routes->get_routes() as $route_php_file => $route_full_path ) {
 
-            if ( is_dir( $route_path ) ) {
+            if ( is_dir( $route_full_path ) ) {
 
-                $route_files = scandir( $route_path );
+                $route_files = scandir( $route_full_path );
 
                 foreach ( $route_files as $route_file ) {
 
@@ -46,13 +51,13 @@ class ThemeRoutes {
                         continue;
                     }
 
-                    $route_file_path = $route_path . '/' . $route_file;
+                    $route_file_path = $route_full_path . '/' . $route_file;
 
                     if ( is_file( $route_file_path ) ) {
                         $route_file_name = str_replace( '.php', '', $route_file );
                         add_rewrite_rule(
-                            $route . '/' . $route_file_name . '/?$',
-                            "index.php?pagename=$route-$route_file_name",
+                            $route_php_file . '/' . $route_file_name . '/?$',
+                            "$route_php_file/$route_file_name",
                             'top'
                         );
                     }
@@ -60,11 +65,11 @@ class ThemeRoutes {
                 }
 
             } else {
-                $route_file_name = str_replace( '.php', '', $route );
+                $route_file_name = str_replace( '.php', '', $route_php_file );
 
                 add_rewrite_rule(
-                    $route . '/?$',
-                    'index.php?pagename=' . $route_file_name,
+                    $route_file_name . '/?$',
+                    $route_php_file,
                     'top'
                 );
 
@@ -72,35 +77,6 @@ class ThemeRoutes {
 
         }
 
-    }
-
-    public function query_vars( $query_vars ) {
-
-        foreach ( $this->routes->get_routes() as $route => $route_path ) {
-
-            if ( is_dir( $route_path ) ) {
-
-                $route_files = scandir( $route_path );
-
-                foreach ( $route_files as $route_file ) {
-
-                    if ( $route_file === '.' || $route_file === '..' ) {
-                        continue;
-                    }
-
-                    $route_file_name = str_replace( '.php', '', $route_file );
-                    $query_vars[]    = "$route-$route_file_name";
-
-                }
-
-            } else {
-                $route_name   = str_replace( '.php', '', $route );
-                $query_vars[] = $route_name;
-            }
-
-        }
-
-        return $query_vars;
     }
 
     public function include_template() {
@@ -145,7 +121,6 @@ class ThemeRoutes {
     public function run() {
 
         add_action( 'init', array( $this, 'rewrite_rule' ) );
-        add_filter( 'query_vars', array( $this, 'query_vars' ) );
         add_action( 'template_include', array( $this, 'include_template' ) );
 
     }
