@@ -5,13 +5,6 @@ namespace CommerceTheme\App;
 class ThemeRoutes {
 
     /**
-     * Object that own of the structure of the "routes" folder.
-     *
-     * @var Routes
-     */
-    private Routes $routes;
-
-    /**
      * Instance of the class.
      *
      * @var ThemeRoutes|null
@@ -35,15 +28,32 @@ class ThemeRoutes {
     /**
      * Here we create the rules that WordPress will use to match the requests.
      *
+     * When the REGEX matches, WordPress will execute a query to find content.
+     *
+     * For example, if we have a route like this:
+     * ["account.php/?$"]=> string(26) "index.php?pagename=account"
+     *
+     * Wordpress search on DB if there is a post of type page with the name "account".
+     *
+     * For our custom routes, we need to create a custom query (see the function "query_vars" below).
+     *
      * add_rewrite_rule( $regex, $query_vars, $flags );
      */
-    public function rewrite_rule() {
+    public static function rewrite_rule() {
 
-        foreach ( $this->routes->get_routes() as $route_php_file => $route_full_path ) {
+        $routes = scandir( get_template_directory() . '/routes' );
 
-            if ( is_dir( $route_full_path ) ) {
+        foreach ( $routes as $route ) {
 
-                $route_files = scandir( $route_full_path );
+            if ( $route === '.' || $route === '..' ) {
+                continue;
+            }
+
+            $routes_path = get_template_directory() . '/routes/' . $route;
+
+            if ( is_dir( $routes_path ) ) {
+
+                $route_files = scandir( $routes_path );
 
                 foreach ( $route_files as $route_file ) {
 
@@ -51,13 +61,13 @@ class ThemeRoutes {
                         continue;
                     }
 
-                    $route_file_path = $route_full_path . '/' . $route_file;
+                    $route_file_path = $routes_path . '/' . $route_file;
 
                     if ( is_file( $route_file_path ) ) {
                         $route_file_name = str_replace( '.php', '', $route_file );
                         add_rewrite_rule(
-                            $route_php_file . '/' . $route_file_name . '/?$',
-                            "$route_php_file/$route_file_name",
+                            $route . '/' . $route_file_name . '/?$',
+                            "index.php?pagename=$route-$route_file_name",
                             'top'
                         );
                     }
@@ -65,11 +75,11 @@ class ThemeRoutes {
                 }
 
             } else {
-                $route_file_name = str_replace( '.php', '', $route_php_file );
+                $route_file_name = str_replace( '.php', '', $route );
 
                 add_rewrite_rule(
-                    $route_file_name . '/?$',
-                    $route_php_file,
+                    $route . '/?$',
+                    'index.php?pagename=' . $route_file_name,
                     'top'
                 );
 
@@ -79,22 +89,65 @@ class ThemeRoutes {
 
     }
 
-    public function include_template() {
-        $route_name       = get_query_var( 'pagename' );
-        $routes_root_path = $this->routes->get_routes_root_dir_path();
+    /**
+     * Query vars are the variables that WordPress will use to find the content.
+     * We need to add our custom query vars here.
+     *
+     * @param [type] $query_vars
+     * @return void
+     */
+    public static function query_vars( $query_vars ) {
+        $routes = scandir( get_template_directory() . '/routes' );
+
+        foreach ( $routes as $route ) {
+
+            if ( $route === '.' || $route === '..' ) {
+                continue;
+            }
+
+            $routes_path = get_template_directory() . '/routes/' . $route;
+
+            if ( is_dir( $routes_path ) ) {
+
+                $route_files = scandir( $routes_path );
+
+                foreach ( $route_files as $route_file ) {
+
+                    if ( $route_file === '.' || $route_file === '..' ) {
+                        continue;
+                    }
+
+                    $route_file_name = str_replace( '.php', '', $route_file );
+                    $query_vars[]    = "$route/$route_file_name";
+
+                }
+
+            } else {
+                $route_name   = str_replace( '.php', '', $route );
+                $query_vars[] = $route_name;
+            }
+
+        }
+
+        return $query_vars;
+    }
+
+    public static function include_template() {
+        $template_name = get_query_var( 'pagename' );
+        $routes_path   = get_template_directory() . '/routes';
 
         /** It is the website home-page. Get the template via wordpress standard way.*/
 
-        if ( $route_name === '' ) {
+        if ( $template_name === '' ) {
             return;
         }
 
         /** Browser points to a route folder. If the index.php file exists, use it otherwise returns 404. */
 
-        if ( is_dir( "$routes_root_path/$route_name" ) ) {
+        if ( is_dir( "$routes_path/$template_name" ) ) {
 
-            if ( file_exists( "$routes_root_path/$route_name/index.php" ) ) {
-                return "$routes_root_path/$route_name/index.php";
+            if ( file_exists( "$routes_path/$template_name/index.php" ) ) {
+                return "$routes_path/$template_name/index.php";
             }
 
             return get_404_template();
@@ -102,10 +155,9 @@ class ThemeRoutes {
 
         /** Browser point to a subroute */
 
-        if ( strpos( $route_name, '-' ) > 0 ) {
-
-            $path       = explode( '-', $route_name );
-            $route_path = $routes_root_path . '/' . $path[0] . '/' . $path[1] . '.php';
+        if ( strpos( $template_name, '-' ) > 0 ) {
+            $path       = explode( '-', $template_name );
+            $route_path = $routes_path . '/' . $path[0] . '/' . $path[1] . '.php';
 
             if ( file_exists( $route_path ) ) {
                 return $route_path;
@@ -114,14 +166,15 @@ class ThemeRoutes {
             return get_404_template();
         }
 
-        return "$routes_root_path/$route_name.php";
+        return "$routes_path/$template_name.php";
 
     }
 
-    public function run() {
+    public static function run() {
 
-        add_action( 'init', array( $this, 'rewrite_rule' ) );
-        add_action( 'template_include', array( $this, 'include_template' ) );
+        add_action( 'init', array( __CLASS__, 'rewrite_rule' ) );
+        add_filter( 'query_vars', array( __CLASS__, 'query_vars' ) );
+        add_action( 'template_include', array( __CLASS__, 'include_template' ) );
 
     }
 

@@ -1,3 +1,13 @@
+<?php
+add_action( 'wp_head', function () {
+    $title = 'Clockdown Editor';
+    echo "<title>$title</title>";
+} );
+
+get_header();
+
+?>
+
 
 <div>
     <h1>This is the HOME page</h1>

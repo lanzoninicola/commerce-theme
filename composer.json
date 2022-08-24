@@ -9,7 +9,8 @@
   "autoload": {
     "psr-4": {
       "CommerceTheme\\App\\": "./app"
-    }
+    },
+    "files": []
   },
   "require-dev": {
     "symfony/var-dumper": "^5.4"

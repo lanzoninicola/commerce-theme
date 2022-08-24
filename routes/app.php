@@ -1,7 +1,13 @@
-<?php get_header();?>
+<?php
+add_action( 'wp_head', function () {
+    $title = 'Clockdown Editor';
+    echo "<title>$title</title>";
+} );
 
-<div>
-    <h1>This is the ACCOUNT page</h1>
-</div>
+get_header();
+
+?>
+
+<div id="clockdown"></div>
 
 <?php get_footer();?>

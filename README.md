@@ -3,7 +3,7 @@
 The routing system is based on the file system. Each file represents a page and each directory represents a section.
 This theme support upto one level of sections.
 
-/routes: this is the folder that contains the routes files
+/routes: this is the folder that contains the templates files for the pages.
 
 ## REACTJS
 

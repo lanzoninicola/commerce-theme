@@ -5,9 +5,13 @@ const glob = require("glob");
 
 module.exports = {
   mode: "development",
-  context: path.resolve(__dirname, "assets"),
+
+  entry: {
+    index: { import: "./src/index/index.ts", filename: "index.bundle.js" },
+    style: "./src/style.css",
+  },
   output: {
-    filename: "main.bundle.js",
+    clean: true,
     path: path.resolve(__dirname, "assets/dist"),
   },
   resolve: {
@@ -17,7 +21,7 @@ module.exports = {
     new ImageminPlugin({
       externalImages: {
         context: ".",
-        sources: glob.sync("assets/src/images/**/*.{png,jpg,jpeg,gif,svg}"),
+        sources: glob.sync("./src/images/**/*.{png,jpg,jpeg,gif,svg}"),
         destination: "assets/dist/images",
         fileName: "[name].[ext]",
       },
